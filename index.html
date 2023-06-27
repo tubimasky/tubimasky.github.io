@@ -61,8 +61,9 @@
             // 内容一致
             if (sql_reg_params && sql_params && sql_reg_params.every((item, index) => item === sql_params[index])) {
                 sql_params = sql_params.map((item) => {
-                    item = item.trim().replace(/`/g, '');
-                    return /^\d+$/.test(item) ? item.replace(/`/g, '') : item.replace(/`/g, '\'');
+                    // item = item.trim().replace(/`/g, '');
+                    // return /^\d+$/.test(item) ? item.replace(/`/g, '') : item.replace(/`/g, '\'');
+                    return item.trim().replace(/`/g, '\'');
                 });
                 // length - 2 为sql 语句
                 let sqlStr = log_arr[log_arr.length - 2];
