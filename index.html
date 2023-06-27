@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>GOORM 日志格式化</title>
+</head>
+<style>
+    /* 定义文本框样式 */
+    textarea {
+        width: 90%;
+        height: 200px;
+    }
+</style>
+
+<body>
+    <textarea id="log" placeholder="请输入 orm 日志"></textarea>
+    <button onclick="format()">格式化</button>
+    <br>
+    <textarea id="sql" placeholder="转换后的 sql"></textarea>
+    <script>
+        // 定义一个sql 语句关键字 map
+        const sqlKeywords =
+            ['SELECT',
+                'FROM',
+                'WHERE',
+                'INSERT INTO',
+                'UPDATE',
+                'DELETE FROM',
+                'JOIN',
+                'ON',
+                'GROUP BY',
+                'ORDER BY',
+                'HAVING'
+            ]
+        function format() {
+            const logInput = document.getElementById('log');
+            const sqlOutput = document.getElementById('sql');
+            sqlOutput.value = '';
+            let ormLog = logInput.value.trim();
+            let ormLogArr = ormLog.split('\n');
+            let sqlArr = ormLogArr.map((item) => orm2sql(item.trim())).filter((item) => item);
+            let ormSql = sqlArr.join('\n');
+            sqlOutput.value = ormSql;
+        }
+
+        function orm2sql(sqlLog) {
+            // 判断是否是 orm 日志: 以[ORM]开头, 不包含sqlKeywordSet 的任何关键字
+            if (!sqlLog.startsWith('[ORM\]') && !sqlKeywords.some((item) => sqlLog.includes(item))) {
+                return null;
+            }
+            // 根据 - 分割
+            let log_arr = sqlLog.split(' - ');
+            let reg = /`.*`/g;
+            // 使用正则进行匹配出参数
+            let sql_reg_params_str = log_arr[log_arr.length - 1].match(reg);
+            // 转为数组
+            let sql_reg_params = sql_reg_params_str && sql_reg_params_str[0].split(',');
+            // 使用 , 进行分割 再进行处理
+            let sql_params = log_arr[log_arr.length - 1].split(',');
+            // 内容一致
+            if (sql_reg_params && sql_params && sql_reg_params.every((item, index) => item === sql_params[index])) {
+                sql_params = sql_params.map((item) => {
+                    item = item.trim().replace(/`/g, '');
+                    return /^\d+$/.test(item) ? item.replace(/`/g, '') : item.replace(/`/g, '\'');
+                });
+                // length - 2 为sql 语句
+                let sqlStr = log_arr[log_arr.length - 2];
+                // 将 sql 字符串中的? 替换为实际参数
+                let sqlWithParams = sqlStr.replace(/\?/g, () => sql_params.shift());
+                // 去掉 []
+                return sqlWithParams.replace(/\[/g, '').replace(/\]/g, '').trim() + ";";
+            } else {
+                return log_arr[log_arr.length - 1].replace(/\[/g, '').replace(/\]/g, '').trim() + ";"
+            }
+        }
+
+        function trans2sql_111(sqlLog) {
+            // 判断是否是 orm 日志: 以[ORM]开头, 不包含sqlKeywordSet 的任何关键字
+            if (sqlLog.startsWith('[ORM]') || sqlKeywords.some((item) => sqlLog.includes(item))) {
+                let sql_arr = sqlLog.split(' - ');
+                let sql_params = sql_arr[sql_arr.length - 1].match(/`.*`/g);
+
+                if (sql_params && sql_params.length > 1) {
+                    let sqlStr = sql_arr[sql_arr.length - 2];
+                    let sqlWithParams = sqlStr.replace(/\?/g, () => {
+                        let param = sql_params.shift().trim().replace(/`/g, '');
+                        // 正则判断是否是数字
+                        if (/^\d+$/.test(param)) {
+                            return param.replace(/`/g, '');
+                        }
+                        return param.replace(/`/g, '\'');
+                    });
+                    return sqlWithParams.replace(/\[|\]/g, '').trim() + ";";
+                } else {
+                    return sql_arr[sql_arr.length - 1].replace(/\[|\]/g, '').trim() + ";";
+                }
+            } else {
+                return null;
+            }
+        }
+
+
+
+
+        function trans2sql(sqlLog) {
+            const sqlArr = sqlLog.split(' - ');
+            const sqlParams = sqlArr.pop().split(',').map((item) => {
+                const trimmedItem = item.trim().replace(/`/g, '');
+                return /^\d+$/.test(trimmedItem) ? trimmedItem : trimmedItem.replace(/`/g, '\'');
+            });
+            const sqlStr = sqlArr.pop();
+            const sqlWithParams = sqlStr.replace(/\?/g, () => sqlParams.shift()).replace(/\[|\]/g, '').trim();
+            return sqlWithParams;
+        }
+
+    </script>
+</body>
+
+</html>
