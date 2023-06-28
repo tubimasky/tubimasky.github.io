@@ -10,16 +10,58 @@
     textarea {
         width: 90%;
         height: 200px;
+        /** 居中*/
+        /* margin: 0 auto;
+        display: block; */
+    }
+
+    /* 定义按钮和标题的样式 */
+    button,
+    h6 {
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    button {
+        width: 100px;
+        height: 30px;
+        /* background-color: #f0f0f0; */
+        border: none;
+        border-radius: 5px;
+        margin-right: 10px;
+    }
+
+    h6 {
+        font-size: 18px;
+        font-weight: bold;
+        margin: 0;
     }
 </style>
 
 <body>
     <textarea id="log" placeholder="请输入 orm 日志"></textarea>
-    <button onclick="format()">格式化</button>
-    <br>
+    <div>
+        <button onclick="format()">格式化</button>
+        <button onclick="distinct()">去重</button>
+        <h6 id="tips"></h6>
+    </div>
     <textarea id="sql" placeholder="转换后的 sql"></textarea>
     <script>
-        // 定义一个sql 语句关键字 map
+        var textarea = document.getElementsByTagName('textarea')
+
+        // 计算 textarea 的高度
+        function setHeight() {
+            var windowHeight = window.innerHeight;
+            var textareaHeight = windowHeight * 0.4; 
+            for (var i = 0; i < textarea.length; i++) {
+                textarea[i].style.height = textareaHeight + 'px';
+            }
+        }
+
+        // 在页面加载和窗口大小改变时调用 setHeight 函数
+        window.onload = setHeight;
+        window.onresize = setHeight;
+        // 定义一个sql 语句关键字 set
         const sqlKeywords =
             ['SELECT',
                 'FROM',
@@ -36,11 +78,13 @@
         function format() {
             const logInput = document.getElementById('log');
             const sqlOutput = document.getElementById('sql');
+            document.getElementById('tips').innerText = '';
             sqlOutput.value = '';
             let ormLog = logInput.value.trim();
             let ormLogArr = ormLog.split('\n');
             let sqlArr = ormLogArr.map((item) => orm2sql(item.trim())).filter((item) => item);
             let ormSql = sqlArr.join('\n');
+
             sqlOutput.value = ormSql;
         }
 
@@ -61,8 +105,9 @@
             // 内容一致
             if (sql_reg_params && sql_params && sql_reg_params.every((item, index) => item === sql_params[index])) {
                 sql_params = sql_params.map((item) => {
-                    item = item.trim().replace(/`/g, '');
-                    return /^\d+$/.test(item) ? item.replace(/`/g, '') : item.replace(/`/g, '\'');
+                    // item = item.trim().replace(/`/g, '');
+                    // return /^\d+$/.test(item) ? item.replace(/`/g, '') : item.replace(/`/g, '\'');
+                    return item.trim().replace(/`/g, '\'');
                 });
                 // length - 2 为sql 语句
                 let sqlStr = log_arr[log_arr.length - 2];
@@ -99,6 +144,10 @@
                 return null;
             }
         }
+
+
+
+
         function trans2sql(sqlLog) {
             const sqlArr = sqlLog.split(' - ');
             const sqlParams = sqlArr.pop().split(',').map((item) => {
@@ -108,6 +157,17 @@
             const sqlStr = sqlArr.pop();
             const sqlWithParams = sqlStr.replace(/\?/g, () => sqlParams.shift()).replace(/\[|\]/g, '').trim();
             return sqlWithParams;
+        }
+
+        function distinct() {
+            format();
+            const sqlOutput = document.getElementById('sql');
+            let sqlArr = sqlOutput.value.trim().split('\n').filter((item) => item);
+            let sqlSet = new Set(sqlArr);
+            console.log(`原条数 ${sqlArr.length} 去重后条数 ${sqlSet.size}`)
+            sqlOutput.value = '';
+            sqlOutput.value = Array.from(sqlSet).join('\n');
+            document.getElementById('tips').innerText = `原条数 ${sqlArr.length} 去重后条数 ${sqlSet.size}`;
         }
 
     </script>
